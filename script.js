@@ -10,7 +10,6 @@
     textEnabled: false,
     logoEnabled: false,
     dateEnabled: false,
-    repeatEnabled: false,
     watermarkText: "",
     textFontFamily: "Arial, Helvetica, sans-serif",
     textFontWeight: "800",
@@ -18,15 +17,17 @@
     textStrokeColor: "#000000",
     textShadow: 35,
     position: "bottom-right",
-    opacity: 75,
-    textSize: 5,
-    logoSize: 18,
-    rotation: 0,
-    repeatColumns: 4,
-    repeatRows: 4,
-    repeatGapX: 2,
-    repeatGapY: 2,
-    hasAutoEnabledRepeat: false,
+    opacity: 38,
+    textSize: 3.8,
+    logoSize: 13,
+    rotation: -24,
+    repeatEnabled: true,
+    repeatColumns: 10,
+    repeatRows: 7,
+    repeatGapX: 12,
+    repeatGapY: 12,
+    repeatShiftX: 12,
+    repeatShiftY: -12,
     format: "image/png",
     quality: 92
   };
@@ -36,6 +37,7 @@
   var defaultLogoPromise = null;
 
   var elements = {
+    editorGrid: document.getElementById("editorGrid"),
     photoInput: document.getElementById("photoInput"),
     cameraToggleBtn: document.getElementById("cameraToggleBtn"),
     clearPhotoBtn: document.getElementById("clearPhotoBtn"),
@@ -71,6 +73,10 @@
     repeatGapXValue: document.getElementById("repeatGapXValue"),
     repeatGapY: document.getElementById("repeatGapY"),
     repeatGapYValue: document.getElementById("repeatGapYValue"),
+    repeatShiftX: document.getElementById("repeatShiftX"),
+    repeatShiftXValue: document.getElementById("repeatShiftXValue"),
+    repeatShiftY: document.getElementById("repeatShiftY"),
+    repeatShiftYValue: document.getElementById("repeatShiftYValue"),
     opacity: document.getElementById("opacity"),
     opacityValue: document.getElementById("opacityValue"),
     textSize: document.getElementById("textSize"),
@@ -87,6 +93,9 @@
     downloadAllBtn: document.getElementById("downloadAllBtn"),
     statusMessage: document.getElementById("statusMessage"),
     previewInfo: document.getElementById("previewInfo"),
+    previewPanel: document.getElementById("previewPanel"),
+    previewPrevBtn: document.getElementById("previewPrevBtn"),
+    previewNextBtn: document.getElementById("previewNextBtn"),
     refreshPreviewBtn: document.getElementById("refreshPreviewBtn"),
     previewDownloadBtn: document.getElementById("previewDownloadBtn"),
     previewCanvas: document.getElementById("previewCanvas"),
@@ -177,6 +186,8 @@
     elements.repeatRowsValue.textContent = state.repeatRows;
     elements.repeatGapXValue.textContent = stripTrailingZero(state.repeatGapX) + "%";
     elements.repeatGapYValue.textContent = stripTrailingZero(state.repeatGapY) + "%";
+    elements.repeatShiftXValue.textContent = stripTrailingZero(state.repeatShiftX) + "%";
+    elements.repeatShiftYValue.textContent = stripTrailingZero(state.repeatShiftY) + "%";
     elements.qualityValue.textContent = state.quality + "%";
   }
 
@@ -256,14 +267,17 @@
     var activePhoto = getActivePhoto();
     var hasPhoto = Boolean(activePhoto);
     var hasPhotos = state.photos.length > 0;
+    var hasMultiplePhotos = state.photos.length > 1;
 
     elements.clearPhotoBtn.disabled = !hasPhoto;
     elements.clearAllBtn.disabled = !hasPhotos;
-    elements.prevPhotoBtn.disabled = state.photos.length < 2;
-    elements.nextPhotoBtn.disabled = state.photos.length < 2;
+    elements.prevPhotoBtn.disabled = !hasMultiplePhotos;
+    elements.nextPhotoBtn.disabled = !hasMultiplePhotos;
     elements.downloadBtn.disabled = !hasPhoto;
     elements.downloadAllBtn.disabled = !hasPhotos;
     elements.previewDownloadBtn.disabled = !hasPhoto;
+    elements.previewPrevBtn.disabled = !hasMultiplePhotos;
+    elements.previewNextBtn.disabled = !hasMultiplePhotos;
     elements.refreshPreviewBtn.disabled = !hasPhoto;
     elements.photoCount.textContent = hasPhotos
       ? state.photos.length + " photo" + (state.photos.length === 1 ? "" : "s") + " loaded"
@@ -276,11 +290,46 @@
       : "The final image will appear here.";
     elements.emptyState.classList.toggle("hidden", hasPhoto);
     elements.previewCanvas.classList.toggle("hidden-canvas", !hasPhoto);
+    elements.editorGrid.classList.toggle("has-photo", hasPhoto);
     renderPhotoList();
   }
 
   function updateLogoUi() {
     elements.logoLabel.textContent = state.logo ? state.logo.name : "Upload logo";
+  }
+
+  function isMobileViewport() {
+    if (typeof window.matchMedia === "function") {
+      return window.matchMedia("(max-width: 940px)").matches;
+    }
+
+    return typeof window.innerWidth === "number" ? window.innerWidth <= 940 : false;
+  }
+
+  function focusPreviewPanel(options) {
+    var settings = options || {};
+
+    if (!isMobileViewport() || !getActivePhoto()) {
+      return;
+    }
+
+    if (typeof elements.previewPanel.scrollIntoView !== "function") {
+      return;
+    }
+
+    var run = function () {
+      elements.previewPanel.scrollIntoView({
+        behavior: settings.instant ? "auto" : "smooth",
+        block: "start"
+      });
+    };
+
+    if (typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(run);
+      return;
+    }
+
+    run();
   }
 
   function updateTextUi() {
@@ -343,12 +392,6 @@
       return;
     }
 
-    if (!state.hasAutoEnabledRepeat) {
-      state.repeatEnabled = true;
-      state.hasAutoEnabledRepeat = true;
-      elements.repeatEnabled.checked = true;
-    }
-
     if (state.logoSource === "none") {
       var defaultLogo = await loadDefaultLogo();
       setLogoSource(defaultLogo, "default");
@@ -373,6 +416,8 @@
     elements.repeatRows.value = String(state.repeatRows);
     elements.repeatGapX.value = String(state.repeatGapX);
     elements.repeatGapY.value = String(state.repeatGapY);
+    elements.repeatShiftX.value = String(state.repeatShiftX);
+    elements.repeatShiftY.value = String(state.repeatShiftY);
     elements.opacity.value = String(state.opacity);
     elements.textSize.value = String(state.textSize);
     elements.logoSize.value = String(state.logoSize);
@@ -452,7 +497,9 @@
     updatePhotoUi();
   }
 
-  function setActivePhotoIndex(index) {
+  function setActivePhotoIndex(index, options) {
+    var settings = options || {};
+
     if (!state.photos.length) {
       state.activePhotoIndex = -1;
       updatePhotoUi();
@@ -462,6 +509,9 @@
 
     state.activePhotoIndex = Math.max(0, Math.min(state.photos.length - 1, index));
     updatePhotoUi();
+    if (!settings.skipFocus) {
+      focusPreviewPanel();
+    }
     applyPhotoSelectionDefaults()
       .catch(function () {
         return null;
@@ -480,7 +530,6 @@
 
     if (!state.photos.length) {
       state.activePhotoIndex = -1;
-      state.hasAutoEnabledRepeat = false;
     } else if (state.activePhotoIndex >= state.photos.length) {
       state.activePhotoIndex = state.photos.length - 1;
     } else if (index < state.activePhotoIndex) {
@@ -518,6 +567,7 @@
       );
       var activateIndex = state.photos.length;
       addPhotos(loadedPhotos, activateIndex);
+      focusPreviewPanel();
       stopCamera();
       await applyPhotoSelectionDefaults().catch(function () {
         return null;
@@ -579,6 +629,7 @@
     context.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
     var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.95);
     addPhotos([{ dataUrl: dataUrl, name: "camera-photo-" + Date.now() + ".jpg" }], state.photos.length);
+    focusPreviewPanel();
     stopCamera();
     await applyPhotoSelectionDefaults().catch(function () {
       return null;
@@ -609,7 +660,6 @@
   function clearAllPhotos() {
     state.photos = [];
     state.activePhotoIndex = -1;
-    state.hasAutoEnabledRepeat = false;
     clearCanvas();
     updatePhotoUi();
     setMessage("All photos cleared. Upload or take another photo.");
@@ -638,7 +688,9 @@
       repeatColumns: state.repeatColumns,
       repeatRows: state.repeatRows,
       repeatGapX: state.repeatGapX,
-      repeatGapY: state.repeatGapY
+      repeatGapY: state.repeatGapY,
+      repeatShiftX: state.repeatShiftX,
+      repeatShiftY: state.repeatShiftY
     };
   }
 
@@ -773,23 +825,40 @@
     }
 
     if (snapshot.repeatEnabled) {
-      var angle = snapshot.rotation === 0 ? -24 : snapshot.rotation;
+      var angle = snapshot.rotation;
       var repeatColumns = Math.max(1, snapshot.repeatColumns);
       var repeatRows = Math.max(1, snapshot.repeatRows);
       var horizontalGap = Math.round(canvas.width * (snapshot.repeatGapX / 100));
       var verticalGap = Math.round(canvas.height * (snapshot.repeatGapY / 100));
-      var spacingX = repeatColumns === 1 ? 0 : Math.max(blockWidth + horizontalGap, (canvas.width - blockWidth) / (repeatColumns - 1));
-      var spacingY = repeatRows === 1 ? 0 : Math.max(blockHeight + verticalGap, (canvas.height - blockHeight) / (repeatRows - 1));
-      var totalWidth = repeatColumns === 1 ? 0 : spacingX * (repeatColumns - 1);
-      var totalHeight = repeatRows === 1 ? 0 : spacingY * (repeatRows - 1);
-      var startX = repeatColumns === 1 ? canvas.width / 2 : (canvas.width - totalWidth) / 2;
-      var startY = repeatRows === 1 ? canvas.height / 2 : (canvas.height - totalHeight) / 2;
+      var rowShiftX = Math.round(canvas.width * (snapshot.repeatShiftX / 100));
+      var columnShiftY = Math.round(canvas.height * (snapshot.repeatShiftY / 100));
+      var spacingX = blockWidth + horizontalGap;
+      var spacingY = blockHeight + verticalGap;
+      var positions = [];
+      var minX = 0;
+      var maxX = 0;
+      var minY = 0;
+      var maxY = 0;
 
       for (var row = 0; row < repeatRows; row += 1) {
         for (var column = 0; column < repeatColumns; column += 1) {
-          drawBlock(startX + column * spacingX, startY + row * spacingY, angle);
+          var repeatX = column * spacingX + row * rowShiftX;
+          var repeatY = row * spacingY + column * columnShiftY;
+
+          positions.push({ x: repeatX, y: repeatY });
+          minX = Math.min(minX, repeatX);
+          maxX = Math.max(maxX, repeatX);
+          minY = Math.min(minY, repeatY);
+          maxY = Math.max(maxY, repeatY);
         }
       }
+
+      var offsetX = canvas.width / 2 - (minX + maxX) / 2;
+      var offsetY = canvas.height / 2 - (minY + maxY) / 2;
+
+      positions.forEach(function (position) {
+        drawBlock(position.x + offsetX, position.y + offsetY, angle);
+      });
     } else {
       var padding = Math.max(24, Math.round(canvas.width * 0.035));
       var x = canvas.width - padding - blockWidth / 2;
@@ -991,6 +1060,22 @@
   }
 
   function bindEvents() {
+    function showPreviousPhoto() {
+      if (state.photos.length < 2) {
+        return;
+      }
+
+      setActivePhotoIndex((state.activePhotoIndex - 1 + state.photos.length) % state.photos.length);
+    }
+
+    function showNextPhoto() {
+      if (state.photos.length < 2) {
+        return;
+      }
+
+      setActivePhotoIndex((state.activePhotoIndex + 1) % state.photos.length);
+    }
+
     elements.photoInput.addEventListener("change", handlePhotoUpload);
     elements.logoInput.addEventListener("change", handleLogoUpload);
     elements.sampleLogoBtn.addEventListener("click", useDefaultLogo);
@@ -1000,21 +1085,11 @@
     elements.downloadBtn.addEventListener("click", downloadImage);
     elements.downloadAllBtn.addEventListener("click", downloadAllPhotos);
     elements.previewDownloadBtn.addEventListener("click", downloadImage);
+    elements.previewPrevBtn.addEventListener("click", showPreviousPhoto);
+    elements.previewNextBtn.addEventListener("click", showNextPhoto);
     elements.refreshPreviewBtn.addEventListener("click", drawWatermark);
-    elements.prevPhotoBtn.addEventListener("click", function () {
-      if (state.photos.length < 2) {
-        return;
-      }
-
-      setActivePhotoIndex((state.activePhotoIndex - 1 + state.photos.length) % state.photos.length);
-    });
-    elements.nextPhotoBtn.addEventListener("click", function () {
-      if (state.photos.length < 2) {
-        return;
-      }
-
-      setActivePhotoIndex((state.activePhotoIndex + 1) % state.photos.length);
-    });
+    elements.prevPhotoBtn.addEventListener("click", showPreviousPhoto);
+    elements.nextPhotoBtn.addEventListener("click", showNextPhoto);
 
     elements.photoList.addEventListener("click", function (event) {
       var button = event.target.closest("button[data-photo-action]");
@@ -1139,6 +1214,18 @@
 
     elements.repeatGapY.addEventListener("input", function (event) {
       state.repeatGapY = Number(event.target.value);
+      updateValueBadges();
+      drawWatermark();
+    });
+
+    elements.repeatShiftX.addEventListener("input", function (event) {
+      state.repeatShiftX = Number(event.target.value);
+      updateValueBadges();
+      drawWatermark();
+    });
+
+    elements.repeatShiftY.addEventListener("input", function (event) {
+      state.repeatShiftY = Number(event.target.value);
       updateValueBadges();
       drawWatermark();
     });

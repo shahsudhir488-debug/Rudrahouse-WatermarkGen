@@ -27,7 +27,7 @@
         </div>
       </section>
 
-      <section class="editor-grid">
+      <section id="editorGrid" class="editor-grid">
         <aside class="panel control-panel">
           <div class="panel-header">
             <h2>Controls</h2>
@@ -169,39 +169,55 @@
                 Repeat diagonal watermark
                 <small>Best for protecting online product photos.</small>
               </span>
-              <input id="repeatEnabled" type="checkbox" />
+              <input id="repeatEnabled" type="checkbox" checked />
             </label>
 
             <div class="repeat-grid">
               <div class="field">
                 <label for="repeatColumns">Horizontal repeats</label>
                 <div class="range-row">
-                  <input id="repeatColumns" type="range" min="1" max="12" value="4" />
-                  <span id="repeatColumnsValue" class="value-badge">4</span>
+                  <input id="repeatColumns" type="range" min="1" max="100" value="10" />
+                  <span id="repeatColumnsValue" class="value-badge">10</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatRows">Vertical repeats</label>
                 <div class="range-row">
-                  <input id="repeatRows" type="range" min="1" max="12" value="4" />
-                  <span id="repeatRowsValue" class="value-badge">4</span>
+                  <input id="repeatRows" type="range" min="1" max="100" value="7" />
+                  <span id="repeatRowsValue" class="value-badge">7</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatGapX">Horizontal gap</label>
                 <div class="range-row">
-                  <input id="repeatGapX" type="range" min="0" max="12" step="0.5" value="2" />
-                  <span id="repeatGapXValue" class="value-badge">2%</span>
+                  <input id="repeatGapX" type="range" min="0" max="100" step="0.5" value="12" />
+                  <span id="repeatGapXValue" class="value-badge">12%</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatGapY">Vertical gap</label>
                 <div class="range-row">
-                  <input id="repeatGapY" type="range" min="0" max="12" step="0.5" value="2" />
-                  <span id="repeatGapYValue" class="value-badge">2%</span>
+                  <input id="repeatGapY" type="range" min="0" max="100" step="0.5" value="12" />
+                  <span id="repeatGapYValue" class="value-badge">12%</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="repeatShiftX">Row horizontal shift</label>
+                <div class="range-row">
+                  <input id="repeatShiftX" type="range" min="-100" max="100" step="0.5" value="12" />
+                  <span id="repeatShiftXValue" class="value-badge">12%</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="repeatShiftY">Column vertical shift</label>
+                <div class="range-row">
+                  <input id="repeatShiftY" type="range" min="-100" max="100" step="0.5" value="-12" />
+                  <span id="repeatShiftYValue" class="value-badge">-12%</span>
                 </div>
               </div>
             </div>
@@ -209,32 +225,32 @@
             <div class="field">
               <label for="opacity">Opacity</label>
               <div class="range-row">
-                <input id="opacity" type="range" min="10" max="100" value="75" />
-                <span id="opacityValue" class="value-badge">75%</span>
+                <input id="opacity" type="range" min="10" max="100" value="38" />
+                <span id="opacityValue" class="value-badge">38%</span>
               </div>
             </div>
 
             <div class="field">
               <label for="textSize">Text size</label>
               <div class="range-row">
-                <input id="textSize" type="range" min="2" max="10" step="0.1" value="5" />
-                <span id="textSizeValue" class="value-badge">5%</span>
+                <input id="textSize" type="range" min="2" max="10" step="0.1" value="3.8" />
+                <span id="textSizeValue" class="value-badge">3.8%</span>
               </div>
             </div>
 
             <div class="field">
               <label for="logoSize">Logo size</label>
               <div class="range-row">
-                <input id="logoSize" type="range" min="5" max="45" value="18" />
-                <span id="logoSizeValue" class="value-badge">18%</span>
+                <input id="logoSize" type="range" min="5" max="45" value="13" />
+                <span id="logoSizeValue" class="value-badge">13%</span>
               </div>
             </div>
 
             <div class="field">
               <label for="rotation">Rotation</label>
               <div class="range-row">
-                <input id="rotation" type="range" min="-45" max="45" value="0" />
-                <span id="rotationValue" class="value-badge">0°</span>
+                <input id="rotation" type="range" min="-45" max="45" value="-24" />
+                <span id="rotationValue" class="value-badge">-24°</span>
               </div>
             </div>
 
@@ -265,13 +281,15 @@
           </div>
         </aside>
 
-        <section class="panel preview-panel">
+        <section id="previewPanel" class="panel preview-panel">
           <div class="panel-header preview-header">
             <div>
               <h2>Preview</h2>
               <p id="previewInfo">The final image will appear here.</p>
             </div>
             <div class="preview-actions">
+              <button id="previewPrevBtn" type="button" class="btn btn-secondary" disabled>Prev Image</button>
+              <button id="previewNextBtn" type="button" class="btn btn-secondary" disabled>Next Image</button>
               <button id="refreshPreviewBtn" type="button" class="btn btn-secondary" disabled>Refresh Preview</button>
               <button id="previewDownloadBtn" type="button" class="btn btn-primary" disabled>Download Current</button>
             </div>

@@ -111,6 +111,10 @@ canvas {
   align-items: start;
 }
 
+.preview-panel {
+  scroll-margin-top: 12px;
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(226, 232, 240, 0.9);
@@ -602,6 +606,26 @@ canvas {
     min-height: auto;
   }
 
+  .editor-grid.has-photo .control-panel {
+    order: 2;
+  }
+
+  .editor-grid.has-photo .preview-panel {
+    order: -1;
+    position: sticky;
+    top: 10px;
+    z-index: 5;
+    min-height: 340px;
+    max-height: 68vh;
+  }
+
+  .editor-grid.has-photo .canvas-stage {
+    min-height: 260px;
+    max-height: calc(68vh - 104px);
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
   .canvas-stage {
     min-height: 510px;
   }
@@ -644,5 +668,18 @@ canvas {
   .preview-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .editor-grid.has-photo .preview-panel {
+    top: 8px;
+    min-height: 300px;
+    max-height: 62vh;
+  }
+
+  .editor-grid.has-photo .canvas-stage {
+    min-height: 220px;
+    max-height: calc(62vh - 104px);
+    padding-left: 12px;
+    padding-right: 12px;
   }
 }
