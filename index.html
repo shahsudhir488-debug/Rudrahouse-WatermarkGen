@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Watermark Studio HTML</title>
+    <meta
+      name="description"
+      content="Standalone HTML version of Watermark Studio for uploading, watermarking, previewing, and downloading branded photos."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Standalone browser app</p>
+          <h1>Watermark Studio HTML</h1>
+          <p>
+            Upload a product photo or take a photo from camera, add your logo, text, or date watermark, preview it,
+            and download the final branded image without Next.js.
+          </p>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot"></span>
+          Static HTML, CSS, and JS
+        </div>
+      </section>
+
+      <section class="editor-grid">
+        <aside class="panel control-panel">
+          <div class="panel-header">
+            <h2>Controls</h2>
+            <p>Start with a photo, then adjust the watermark.</p>
+          </div>
+
+          <div class="controls">
+            <p class="section-title">1. Select photo</p>
+
+            <label class="file-drop">
+              <input id="photoInput" type="file" accept="image/*" multiple />
+              <strong>Upload from gallery or files</strong>
+              <span>Mobile gallery is supported now. Use Live Camera below if you want to shoot a new photo.</span>
+            </label>
+
+            <div class="button-row">
+              <button id="cameraToggleBtn" type="button" class="btn btn-secondary">Live Camera</button>
+              <button id="clearPhotoBtn" type="button" class="btn btn-secondary" disabled>Remove Current</button>
+            </div>
+
+            <div id="cameraBox" class="camera-box hidden">
+              <video id="cameraPreview" playsinline muted autoplay></video>
+              <button id="capturePhotoBtn" type="button" class="btn btn-primary">Capture Photo</button>
+            </div>
+
+            <div class="photo-manager">
+              <div class="photo-toolbar">
+                <div class="photo-toolbar-copy">
+                  <strong id="photoCount">0 photos loaded</strong>
+                  <span id="photoQueueHint">Bulk upload will create a photo queue here.</span>
+                </div>
+                <div class="photo-toolbar-actions">
+                  <button id="prevPhotoBtn" type="button" class="btn btn-secondary btn-compact" disabled>Prev</button>
+                  <button id="nextPhotoBtn" type="button" class="btn btn-secondary btn-compact" disabled>Next</button>
+                  <button id="clearAllBtn" type="button" class="btn btn-secondary btn-compact" disabled>Clear All</button>
+                </div>
+              </div>
+
+              <div id="photoList" class="photo-list">
+                <div class="photo-list-empty">No photos in queue yet.</div>
+              </div>
+            </div>
+
+            <p class="section-title">2. Watermark content</p>
+
+            <label class="toggle-row">
+              <span>
+                Text watermark
+                <small>Brand name, copyright text, or website.</small>
+              </span>
+              <input id="textEnabled" type="checkbox" />
+            </label>
+
+            <div class="field">
+              <label for="watermarkText">Watermark text</label>
+              <input id="watermarkText" class="input" placeholder="Add brand name, website, or custom line" />
+            </div>
+
+            <div class="text-style-grid">
+              <div class="field">
+                <label for="textFontFamily">Text font</label>
+                <select id="textFontFamily" class="select">
+                  <option value="Arial, Helvetica, sans-serif">Clean Sans</option>
+                  <option value="Verdana, Geneva, sans-serif">Wide Sans</option>
+                  <option value="Georgia, 'Times New Roman', serif">Classic Serif</option>
+                  <option value="'Trebuchet MS', 'Segoe UI', sans-serif">Modern Display</option>
+                  <option value="'Courier New', Courier, monospace">Mono Stamp</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="textFontWeight">Font weight</label>
+                <select id="textFontWeight" class="select">
+                  <option value="600">Semi Bold</option>
+                  <option value="700">Bold</option>
+                  <option value="800" selected>Extra Bold</option>
+                  <option value="900">Heavy</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="textFillColor">Text color</label>
+                <input id="textFillColor" class="color-input" type="color" value="#ffffff" />
+              </div>
+
+              <div class="field">
+                <label for="textStrokeColor">Outline color</label>
+                <input id="textStrokeColor" class="color-input" type="color" value="#000000" />
+              </div>
+
+              <div class="field text-style-span">
+                <label for="textShadow">Shadow strength</label>
+                <div class="range-row">
+                  <input id="textShadow" type="range" min="0" max="100" value="35" />
+                  <span id="textShadowValue" class="value-badge">35%</span>
+                </div>
+              </div>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Date stamp
+                <small>Adds today's date below text.</small>
+              </span>
+              <input id="dateEnabled" type="checkbox" />
+            </label>
+
+            <label class="toggle-row">
+              <span>
+                Logo watermark
+                <small>Use transparent PNG or SVG for best result.</small>
+              </span>
+              <input id="logoEnabled" type="checkbox" />
+            </label>
+
+            <label class="file-drop">
+              <input id="logoInput" type="file" accept="image/*,.svg" />
+              <strong id="logoLabel">Upload logo</strong>
+              <span>PNG, JPG, WEBP, or SVG.</span>
+            </label>
+
+            <button id="sampleLogoBtn" type="button" class="btn btn-secondary">Use Default Logo</button>
+
+            <p class="section-title">3. Style</p>
+
+            <div class="field">
+              <label for="position">Position</label>
+              <select id="position" class="select">
+                <option value="bottom-right">Bottom right</option>
+                <option value="bottom-left">Bottom left</option>
+                <option value="top-right">Top right</option>
+                <option value="top-left">Top left</option>
+                <option value="center">Center</option>
+              </select>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Repeat diagonal watermark
+                <small>Best for protecting online product photos.</small>
+              </span>
+              <input id="repeatEnabled" type="checkbox" />
+            </label>
+
+            <div class="repeat-grid">
+              <div class="field">
+                <label for="repeatColumns">Horizontal repeats</label>
+                <div class="range-row">
+                  <input id="repeatColumns" type="range" min="1" max="12" value="4" />
+                  <span id="repeatColumnsValue" class="value-badge">4</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="repeatRows">Vertical repeats</label>
+                <div class="range-row">
+                  <input id="repeatRows" type="range" min="1" max="12" value="4" />
+                  <span id="repeatRowsValue" class="value-badge">4</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="repeatGapX">Horizontal gap</label>
+                <div class="range-row">
+                  <input id="repeatGapX" type="range" min="0" max="12" step="0.5" value="2" />
+                  <span id="repeatGapXValue" class="value-badge">2%</span>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="repeatGapY">Vertical gap</label>
+                <div class="range-row">
+                  <input id="repeatGapY" type="range" min="0" max="12" step="0.5" value="2" />
+                  <span id="repeatGapYValue" class="value-badge">2%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="opacity">Opacity</label>
+              <div class="range-row">
+                <input id="opacity" type="range" min="10" max="100" value="75" />
+                <span id="opacityValue" class="value-badge">75%</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="textSize">Text size</label>
+              <div class="range-row">
+                <input id="textSize" type="range" min="2" max="10" step="0.1" value="5" />
+                <span id="textSizeValue" class="value-badge">5%</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="logoSize">Logo size</label>
+              <div class="range-row">
+                <input id="logoSize" type="range" min="5" max="45" value="18" />
+                <span id="logoSizeValue" class="value-badge">18%</span>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="rotation">Rotation</label>
+              <div class="range-row">
+                <input id="rotation" type="range" min="-45" max="45" value="0" />
+                <span id="rotationValue" class="value-badge">0°</span>
+              </div>
+            </div>
+
+            <p class="section-title">4. Export</p>
+
+            <div class="field">
+              <label for="format">Format</label>
+              <select id="format" class="select">
+                <option value="image/png">PNG, best quality</option>
+                <option value="image/jpeg">JPG, smaller file</option>
+              </select>
+            </div>
+
+            <div id="qualityField" class="field hidden">
+              <label for="quality">JPG quality</label>
+              <div class="range-row">
+                <input id="quality" type="range" min="50" max="100" value="92" />
+                <span id="qualityValue" class="value-badge">92%</span>
+              </div>
+            </div>
+
+            <div class="action-grid">
+              <button id="downloadBtn" type="button" class="btn btn-primary" disabled>Download Current Photo</button>
+              <button id="downloadAllBtn" type="button" class="btn btn-secondary" disabled>Download All Photos</button>
+            </div>
+
+            <div id="statusMessage" class="notice">Upload or take a photo to start.</div>
+          </div>
+        </aside>
+
+        <section class="panel preview-panel">
+          <div class="panel-header preview-header">
+            <div>
+              <h2>Preview</h2>
+              <p id="previewInfo">The final image will appear here.</p>
+            </div>
+            <div class="preview-actions">
+              <button id="refreshPreviewBtn" type="button" class="btn btn-secondary" disabled>Refresh Preview</button>
+              <button id="previewDownloadBtn" type="button" class="btn btn-primary" disabled>Download Current</button>
+            </div>
+          </div>
+
+          <div class="canvas-stage">
+            <div class="canvas-wrap">
+              <canvas id="previewCanvas" class="preview-canvas hidden-canvas" aria-label="Watermarked image preview"></canvas>
+
+              <div id="emptyState" class="empty-state">
+                <div class="empty-icon">✦</div>
+                <h3>No photo selected</h3>
+                <p>Upload a Rudraksha, product, certificate, or camera photo. Your watermark preview will appear here.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <p class="footer-note">
+        Upload and download work as a local static page. Live camera still needs localhost or HTTPS in most browsers.
+        `logo.png` is the automatic default watermark after you choose a photo if you have not uploaded your own logo.
+        Bulk download uses a ZIP when the JSZip helper loads, and falls back to separate downloads otherwise.
+      </p>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
