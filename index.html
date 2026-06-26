@@ -64,12 +64,17 @@
                 Text watermark
                 <small>Brand name, copyright text, or website.</small>
               </span>
-              <input id="textEnabled" type="checkbox" />
+              <input id="textEnabled" type="checkbox" checked />
             </label>
 
             <div class="field">
               <label for="watermarkText">Watermark text</label>
-              <input id="watermarkText" class="input" placeholder="Add brand name, website, or custom line" />
+              <input
+                id="watermarkText"
+                class="input"
+                placeholder="Add brand name, website, or custom line"
+                value="©rudrhouse.com"
+              />
             </div>
 
             <div class="text-style-grid">
@@ -107,8 +112,8 @@
               <div class="field text-style-span">
                 <label for="textShadow">Shadow strength</label>
                 <div class="range-row">
-                  <input id="textShadow" type="range" min="0" max="100" value="35" />
-                  <span id="textShadowValue" class="value-badge">35%</span>
+                  <input id="textShadow" type="range" min="0" max="100" value="0" />
+                  <span id="textShadowValue" class="value-badge">0%</span>
                 </div>
               </div>
             </div>
@@ -131,7 +136,7 @@
 
             <label class="file-drop">
               <input id="logoInput" type="file" accept="image/*,.svg" />
-              <strong id="logoLabel">Upload logo</strong>
+              <strong id="logoLabel">logo.png</strong>
               <span>PNG, JPG, WEBP, or SVG.</span>
             </label>
 
@@ -162,48 +167,48 @@
               <div class="field">
                 <label for="repeatColumns">Horizontal repeats</label>
                 <div class="range-row">
-                  <input id="repeatColumns" type="range" min="1" max="100" value="10" />
-                  <span id="repeatColumnsValue" class="value-badge">10</span>
+                  <input id="repeatColumns" type="range" min="1" max="100" value="66" />
+                  <span id="repeatColumnsValue" class="value-badge">66</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatRows">Vertical repeats</label>
                 <div class="range-row">
-                  <input id="repeatRows" type="range" min="1" max="100" value="7" />
-                  <span id="repeatRowsValue" class="value-badge">7</span>
+                  <input id="repeatRows" type="range" min="1" max="100" value="44" />
+                  <span id="repeatRowsValue" class="value-badge">44</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatGapX">Horizontal gap</label>
                 <div class="range-row">
-                  <input id="repeatGapX" type="range" min="0" max="100" step="0.5" value="12" />
-                  <span id="repeatGapXValue" class="value-badge">12%</span>
+                  <input id="repeatGapX" type="range" min="0" max="100" step="0.5" value="13.5" />
+                  <span id="repeatGapXValue" class="value-badge">13.5%</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatGapY">Vertical gap</label>
                 <div class="range-row">
-                  <input id="repeatGapY" type="range" min="0" max="100" step="0.5" value="12" />
-                  <span id="repeatGapYValue" class="value-badge">12%</span>
+                  <input id="repeatGapY" type="range" min="0" max="100" step="0.5" value="22.5" />
+                  <span id="repeatGapYValue" class="value-badge">22.5%</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatShiftX">Row horizontal shift</label>
                 <div class="range-row">
-                  <input id="repeatShiftX" type="range" min="-100" max="100" step="0.5" value="12" />
-                  <span id="repeatShiftXValue" class="value-badge">12%</span>
+                  <input id="repeatShiftX" type="range" min="-100" max="100" step="0.5" value="45" />
+                  <span id="repeatShiftXValue" class="value-badge">45%</span>
                 </div>
               </div>
 
               <div class="field">
                 <label for="repeatShiftY">Column vertical shift</label>
                 <div class="range-row">
-                  <input id="repeatShiftY" type="range" min="-100" max="100" step="0.5" value="-12" />
-                  <span id="repeatShiftYValue" class="value-badge">-12%</span>
+                  <input id="repeatShiftY" type="range" min="-100" max="100" step="0.5" value="5" />
+                  <span id="repeatShiftYValue" class="value-badge">5%</span>
                 </div>
               </div>
             </div>
@@ -211,16 +216,16 @@
             <div class="field">
               <label for="opacity">Opacity</label>
               <div class="range-row">
-                <input id="opacity" type="range" min="10" max="100" value="38" />
-                <span id="opacityValue" class="value-badge">38%</span>
+                <input id="opacity" type="range" min="10" max="100" value="14" />
+                <span id="opacityValue" class="value-badge">14%</span>
               </div>
             </div>
 
             <div class="field">
               <label for="textSize">Text size</label>
               <div class="range-row">
-                <input id="textSize" type="range" min="2" max="10" step="0.1" value="3.8" />
-                <span id="textSizeValue" class="value-badge">3.8%</span>
+                <input id="textSize" type="range" min="2" max="10" step="0.1" value="2.3" />
+                <span id="textSizeValue" class="value-badge">2.3%</span>
               </div>
             </div>
 
@@ -297,7 +302,7 @@
 
       <p class="footer-note">
         Upload and download work as a local static page. Live camera still needs localhost or HTTPS in most browsers.
-        `logo.png` is the automatic default watermark after you choose a photo if you have not uploaded your own logo.
+        `logo.png` is preloaded as the default logo option, and you can enable it anytime or replace it with your own.
         Bulk download uses a ZIP when the JSZip helper loads, and falls back to separate downloads otherwise.
       </p>
     </main>
