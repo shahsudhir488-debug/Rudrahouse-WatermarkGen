@@ -26,13 +26,18 @@
             <label class="file-drop">
               <input id="photoInput" type="file" accept="image/*" multiple />
               <strong>Upload from gallery or files</strong>
-              <span>Mobile gallery is supported now. Use Live Camera below if you want to shoot a new photo.</span>
+              <span>Mobile gallery is supported now. On phone, use Phone Camera below if you want the original shot to stay in Photos or Gallery.</span>
             </label>
 
+            <input id="phoneCameraInput" class="hidden-file-input" type="file" accept="image/*" capture="environment" />
+
             <div class="button-row">
+              <button id="phoneCameraBtn" type="button" class="btn btn-secondary hidden">Phone Camera</button>
               <button id="cameraToggleBtn" type="button" class="btn btn-secondary">Live Camera</button>
               <button id="clearPhotoBtn" type="button" class="btn btn-secondary" disabled>Remove Current</button>
             </div>
+
+            <p id="mobileSaveHint" class="helper-note hidden"></p>
 
             <div id="cameraBox" class="camera-box hidden">
               <video id="cameraPreview" playsinline muted autoplay></video>
@@ -302,6 +307,7 @@
 
       <p class="footer-note">
         Upload and download work as a local static page. Live camera still needs localhost or HTTPS in most browsers.
+        On supported phones, saving the current image opens the native share sheet so you can send it to Photos or Gallery.
         `logo.png` is preloaded as the default logo option, and you can enable it anytime or replace it with your own.
         Bulk download uses a ZIP when the JSZip helper loads, and falls back to separate downloads otherwise.
       </p>

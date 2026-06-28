@@ -7,6 +7,7 @@
     logo: { dataUrl: "./logo.png", name: "logo.png" },
     logoSource: "default",
     cameraOpen: false,
+    isRendering: false,
     textEnabled: true,
     logoEnabled: false,
     dateEnabled: false,
@@ -39,6 +40,8 @@
   var elements = {
     editorGrid: document.getElementById("editorGrid"),
     photoInput: document.getElementById("photoInput"),
+    phoneCameraInput: document.getElementById("phoneCameraInput"),
+    phoneCameraBtn: document.getElementById("phoneCameraBtn"),
     cameraToggleBtn: document.getElementById("cameraToggleBtn"),
     clearPhotoBtn: document.getElementById("clearPhotoBtn"),
     clearAllBtn: document.getElementById("clearAllBtn"),
@@ -91,6 +94,7 @@
     qualityValue: document.getElementById("qualityValue"),
     downloadBtn: document.getElementById("downloadBtn"),
     downloadAllBtn: document.getElementById("downloadAllBtn"),
+    mobileSaveHint: document.getElementById("mobileSaveHint"),
     statusMessage: document.getElementById("statusMessage"),
     previewInfo: document.getElementById("previewInfo"),
     previewPanel: document.getElementById("previewPanel"),
@@ -125,6 +129,160 @@
   function safeFileName(name, extension) {
     var base = name.replace(/\.[^/.]+$/, "").replace(/[^a-z0-9-_]+/gi, "-").toLowerCase();
     return (base || "watermarked-photo") + "-watermarked." + extension;
+  }
+
+  function exportExtension() {
+    return state.format === "image/png" ? "png" : "jpg";
+  }
+
+  function isTouchDevice() {
+    if (typeof navigator.maxTouchPoints === "number") {
+      return navigator.maxTouchPoints > 0;
+    }
+
+    return "ontouchstart" in window;
+  }
+
+  function isMobileDevice() {
+    if (navigator.userAgentData && typeof navigator.userAgentData.mobile === "boolean") {
+      return navigator.userAgentData.mobile;
+    }
+
+    if (typeof navigator.userAgent === "string") {
+      if (/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) {
+        return true;
+      }
+
+      if (/Macintosh/i.test(navigator.userAgent) && isTouchDevice()) {
+        return true;
+      }
+    }
+
+    return isTouchDevice() && isMobileViewport();
+  }
+
+  function canNativePhoneSave() {
+    if (!isMobileDevice() || !window.isSecureContext) {
+      return false;
+    }
+
+    return (
+      typeof navigator.share === "function" &&
+      typeof navigator.canShare === "function" &&
+      typeof window.File === "function"
+    );
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    var parts = String(dataUrl || "").split(",");
+    var metadata = parts[0] || "";
+    var payload = parts[1] || "";
+    var mimeMatch = metadata.match(/^data:([^;]+);base64$/i);
+
+    if (!mimeMatch || !payload) {
+      throw new Error("Could not prepare this image.");
+    }
+
+    var binary = window.atob(payload);
+    var bytes = new Uint8Array(binary.length);
+
+    for (var index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+
+    return new Blob([bytes], { type: mimeMatch[1] });
+  }
+
+  function createAssetFromDataUrl(dataUrl, fileName) {
+    return {
+      blob: dataUrlToBlob(dataUrl),
+      fileName: fileName
+    };
+  }
+
+  function buildCurrentPreviewAssetSync() {
+    var photo = getActivePhoto();
+
+    if (!photo) {
+      throw new Error("Upload or capture a photo first.");
+    }
+
+    if (!elements.previewCanvas.width || !elements.previewCanvas.height || state.isRendering) {
+      throw new Error("Preview is not ready yet. Wait a moment and try again.");
+    }
+
+    var dataUrl = elements.previewCanvas.toDataURL(
+      state.format,
+      state.format === "image/jpeg" ? state.quality / 100 : undefined
+    );
+
+    return createAssetFromDataUrl(dataUrl, safeFileName(photo.name, exportExtension()));
+  }
+
+  function createFileFromAsset(asset) {
+    return new File([asset.blob], asset.fileName, {
+      type: asset.blob.type || state.format,
+      lastModified: Date.now()
+    });
+  }
+
+  function canShareFiles(files) {
+    if (!canNativePhoneSave()) {
+      return false;
+    }
+
+    try {
+      return navigator.canShare({ files: files });
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async function tryNativeShareFiles(files, title) {
+    if (!canShareFiles(files)) {
+      return { status: "unsupported" };
+    }
+
+    try {
+      await navigator.share({
+        files: files,
+        title: title
+      });
+      return { status: "shared" };
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        return { status: "cancelled" };
+      }
+
+      return { status: "failed", error: error };
+    }
+  }
+
+  async function saveAssetToDevice(asset, options) {
+    var settings = options || {};
+
+    if (settings.preferPhoneSave && canNativePhoneSave()) {
+      var shareResult = await tryNativeShareFiles([createFileFromAsset(asset)], asset.fileName);
+
+      if (shareResult.status === "shared") {
+        return { method: "phone-share" };
+      }
+
+      if (shareResult.status === "cancelled") {
+        return { method: "cancelled" };
+      }
+    }
+
+    triggerBlobDownload(asset.blob, asset.fileName);
+    return { method: "download" };
+  }
+
+  function getLiveCameraButtonLabel() {
+    if (state.cameraOpen) {
+      return "Close Live Camera";
+    }
+
+    return isMobileDevice() ? "Live Browser Camera" : "Live Camera";
   }
 
   function readFileAsDataUrl(file) {
@@ -211,7 +369,21 @@
 
   function updateCameraUi() {
     elements.cameraBox.classList.toggle("hidden", !state.cameraOpen);
-    elements.cameraToggleBtn.textContent = state.cameraOpen ? "Close Camera" : "Live Camera";
+    elements.cameraToggleBtn.textContent = getLiveCameraButtonLabel();
+  }
+
+  function updateDeviceUi() {
+    var mobileDevice = isMobileDevice();
+    var nativePhoneSave = canNativePhoneSave();
+
+    elements.phoneCameraBtn.classList.toggle("hidden", !mobileDevice);
+    elements.mobileSaveHint.classList.toggle("hidden", !mobileDevice);
+    elements.downloadBtn.textContent = nativePhoneSave ? "Save Current Photo" : "Download Current Photo";
+    elements.previewDownloadBtn.textContent = nativePhoneSave ? "Save Current" : "Download Current";
+    elements.mobileSaveHint.textContent = nativePhoneSave
+      ? "Phone Camera uses your device camera app. Save Current opens your phone share sheet so you can choose Photos or Save Image."
+      : "Phone Camera uses your device camera app. In browsers without native image sharing, downloads still go to Downloads or Files.";
+    updateCameraUi();
   }
 
   function renderPhotoList() {
@@ -268,14 +440,16 @@
     var hasPhoto = Boolean(activePhoto);
     var hasPhotos = state.photos.length > 0;
     var hasMultiplePhotos = state.photos.length > 1;
+    var canExport = hasPhoto && !state.isRendering;
+    var canBulkExport = hasPhotos && !state.isRendering;
 
     elements.clearPhotoBtn.disabled = !hasPhoto;
     elements.clearAllBtn.disabled = !hasPhotos;
     elements.prevPhotoBtn.disabled = !hasMultiplePhotos;
     elements.nextPhotoBtn.disabled = !hasMultiplePhotos;
-    elements.downloadBtn.disabled = !hasPhoto;
-    elements.downloadAllBtn.disabled = !hasPhotos;
-    elements.previewDownloadBtn.disabled = !hasPhoto;
+    elements.downloadBtn.disabled = !canExport;
+    elements.downloadAllBtn.disabled = !canBulkExport;
+    elements.previewDownloadBtn.disabled = !canExport;
     elements.previewPrevBtn.disabled = !hasMultiplePhotos;
     elements.previewNextBtn.disabled = !hasMultiplePhotos;
     elements.refreshPreviewBtn.disabled = !hasPhoto;
@@ -426,7 +600,7 @@
     elements.quality.value = String(state.quality);
     updateValueBadges();
     updateQualityField();
-    updateCameraUi();
+    updateDeviceUi();
     updatePhotoUi();
     updateLogoUi();
     updateTextUi();
@@ -627,11 +801,23 @@
     }
 
     context.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+    var captureFileName = "camera-photo-" + Date.now() + ".jpg";
     var dataUrl = captureCanvas.toDataURL("image/jpeg", 0.95);
-    addPhotos([{ dataUrl: dataUrl, name: "camera-photo-" + Date.now() + ".jpg" }], state.photos.length);
+    var captureSavePromise = Promise.resolve({ status: "unsupported" });
+
+    if (canNativePhoneSave()) {
+      captureSavePromise = tryNativeShareFiles(
+        [createFileFromAsset(createAssetFromDataUrl(dataUrl, captureFileName))],
+        captureFileName
+      );
+    }
+    addPhotos([{ dataUrl: dataUrl, name: captureFileName }], state.photos.length);
     focusPreviewPanel();
     stopCamera();
     await applyPhotoSelectionDefaults().catch(function () {
+      return null;
+    });
+    captureSavePromise.catch(function () {
       return null;
     });
     setMessage("Camera photo captured. Watermark preview is preparing.");
@@ -925,10 +1111,9 @@
       throw new Error("Enable text, logo, or date watermark before downloading.");
     }
 
-    var extension = state.format === "image/png" ? "png" : "jpg";
     return {
       blob: await canvasToBlob(offscreenCanvas),
-      fileName: safeFileName(photo.name, extension)
+      fileName: safeFileName(photo.name, exportExtension())
     };
   }
 
@@ -947,10 +1132,35 @@
       setMessage("Preparing " + photo.name + "...");
     }
 
-    var asset = await buildWatermarkedAsset(photo);
-    triggerBlobDownload(asset.blob, asset.fileName);
+    var asset = null;
+
+    if (index === state.activePhotoIndex) {
+      try {
+        asset = buildCurrentPreviewAssetSync();
+      } catch (error) {
+        asset = null;
+      }
+    }
+
+    if (!asset) {
+      asset = await buildWatermarkedAsset(photo);
+    }
+
+    var saveResult = await saveAssetToDevice(asset, {
+      preferPhoneSave: Boolean(settings.preferPhoneSave)
+    });
 
     if (!settings.silent) {
+      if (saveResult.method === "phone-share") {
+        setMessage("Phone save sheet opened for " + photo.name + ". Choose Photos or Save Image there.");
+        return;
+      }
+
+      if (saveResult.method === "cancelled") {
+        setMessage("Save cancelled.");
+        return;
+      }
+
       setMessage("Downloaded " + photo.name + ".");
     }
   }
@@ -962,7 +1172,9 @@
     }
 
     try {
-      await downloadPhotoByIndex(state.activePhotoIndex);
+      await downloadPhotoByIndex(state.activePhotoIndex, {
+        preferPhoneSave: canNativePhoneSave()
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Download failed. Try again.");
     }
@@ -988,6 +1200,13 @@
     }
 
     try {
+      if (state.photos.length === 1) {
+        await downloadPhotoByIndex(0, {
+          preferPhoneSave: canNativePhoneSave()
+        });
+        return;
+      }
+
       if (window.JSZip) {
         setMessage("Preparing ZIP for " + state.photos.length + " photos...");
         var zip = new window.JSZip();
@@ -1026,12 +1245,15 @@
 
     if (!photo) {
       renderToken += 1;
+      state.isRendering = false;
       updatePhotoUi();
       return;
     }
 
     var token = ++renderToken;
     var snapshot = createRenderSnapshot(photo);
+    state.isRendering = true;
+    updatePhotoUi();
 
     try {
       var assets = await loadRenderAssets(snapshot);
@@ -1047,14 +1269,20 @@
       }
 
       if (!drawn) {
+        state.isRendering = false;
         updatePhotoUi();
         setMessage("Photo loaded. Enable text, logo, or date watermark.");
         return;
       }
 
+      state.isRendering = false;
       updatePhotoUi();
-      setMessage("Preview ready. You can download the selected photo.");
+      setMessage(canNativePhoneSave() ? "Preview ready. You can save the selected photo to your phone." : "Preview ready. You can download the selected photo.");
     } catch (error) {
+      if (token === renderToken) {
+        state.isRendering = false;
+        updatePhotoUi();
+      }
       setMessage(error instanceof Error ? error.message : "Something went wrong while drawing the image.");
     }
   }
@@ -1077,10 +1305,18 @@
     }
 
     elements.photoInput.addEventListener("change", handlePhotoUpload);
+    elements.phoneCameraInput.addEventListener("change", handlePhotoUpload);
     elements.logoInput.addEventListener("change", handleLogoUpload);
     elements.sampleLogoBtn.addEventListener("click", useDefaultLogo);
     elements.clearPhotoBtn.addEventListener("click", clearPhoto);
     elements.clearAllBtn.addEventListener("click", clearAllPhotos);
+    elements.phoneCameraBtn.addEventListener("click", function () {
+      if (state.cameraOpen) {
+        stopCamera();
+      }
+
+      elements.phoneCameraInput.click();
+    });
     elements.capturePhotoBtn.addEventListener("click", capturePhoto);
     elements.downloadBtn.addEventListener("click", downloadImage);
     elements.downloadAllBtn.addEventListener("click", downloadAllPhotos);
@@ -1266,6 +1502,7 @@
     });
 
     window.addEventListener("beforeunload", stopCamera);
+    window.addEventListener("resize", updateDeviceUi);
   }
 
   syncFormControls();
