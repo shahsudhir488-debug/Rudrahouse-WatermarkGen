@@ -270,6 +270,7 @@
 
             <div class="action-grid">
               <button id="downloadBtn" type="button" class="btn btn-primary" disabled>Download Current Photo</button>
+              <button id="saveAllGalleryBtn" type="button" class="btn btn-secondary hidden" disabled>Save All to Gallery</button>
               <button id="downloadAllBtn" type="button" class="btn btn-secondary" disabled>Download All Photos</button>
             </div>
 
@@ -307,9 +308,9 @@
 
       <p class="footer-note">
         Upload and download work as a local static page. Live camera still needs localhost or HTTPS in most browsers.
-        On supported phones, saving the current image opens the native share sheet so you can send it to Photos or Gallery.
+        On supported phones, saving the current image opens the native share sheet so you can send it to Photos or Gallery, and Save All to Gallery tries to send multiple images without making a ZIP.
         `logo.png` is preloaded as the default logo option, and you can enable it anytime or replace it with your own.
-        Bulk download uses a ZIP when the JSZip helper loads, and falls back to separate downloads otherwise.
+        On desktop, bulk download uses a ZIP when the JSZip helper loads, and falls back to separate downloads otherwise.
       </p>
     </main>
 

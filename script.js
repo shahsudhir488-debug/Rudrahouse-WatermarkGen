@@ -93,6 +93,7 @@
     quality: document.getElementById("quality"),
     qualityValue: document.getElementById("qualityValue"),
     downloadBtn: document.getElementById("downloadBtn"),
+    saveAllGalleryBtn: document.getElementById("saveAllGalleryBtn"),
     downloadAllBtn: document.getElementById("downloadAllBtn"),
     mobileSaveHint: document.getElementById("mobileSaveHint"),
     statusMessage: document.getElementById("statusMessage"),
@@ -277,6 +278,25 @@
     return { method: "download" };
   }
 
+  async function buildAllWatermarkedAssets() {
+    var assets = [];
+
+    for (var index = 0; index < state.photos.length; index += 1) {
+      if (index === state.activePhotoIndex) {
+        try {
+          assets.push(buildCurrentPreviewAssetSync());
+          continue;
+        } catch (error) {
+          // Fall through to a fresh offscreen render.
+        }
+      }
+
+      assets.push(await buildWatermarkedAsset(state.photos[index]));
+    }
+
+    return assets;
+  }
+
   function getLiveCameraButtonLabel() {
     if (state.cameraOpen) {
       return "Close Live Camera";
@@ -377,11 +397,13 @@
     var nativePhoneSave = canNativePhoneSave();
 
     elements.phoneCameraBtn.classList.toggle("hidden", !mobileDevice);
+    elements.saveAllGalleryBtn.classList.toggle("hidden", !mobileDevice || !nativePhoneSave);
     elements.mobileSaveHint.classList.toggle("hidden", !mobileDevice);
     elements.downloadBtn.textContent = nativePhoneSave ? "Save Current Photo" : "Download Current Photo";
     elements.previewDownloadBtn.textContent = nativePhoneSave ? "Save Current" : "Download Current";
+    elements.downloadAllBtn.textContent = mobileDevice ? "Download All Separately" : "Download All Photos";
     elements.mobileSaveHint.textContent = nativePhoneSave
-      ? "Phone Camera uses your device camera app. Save Current opens your phone share sheet so you can choose Photos or Save Image."
+      ? "Phone Camera uses your device camera app. Save Current opens your phone share sheet, Save All to Gallery tries all selected photos together, and Download All Separately avoids ZIP on mobile."
       : "Phone Camera uses your device camera app. In browsers without native image sharing, downloads still go to Downloads or Files.";
     updateCameraUi();
   }
@@ -391,6 +413,8 @@
       elements.photoList.innerHTML = '<div class="photo-list-empty">No photos in queue yet.</div>';
       return;
     }
+
+    var exportLabel = canNativePhoneSave() ? "Save" : "Download";
 
     elements.photoList.innerHTML = state.photos
       .map(function (photo, index) {
@@ -415,7 +439,9 @@
           '">Preview</button>' +
           '<button type="button" class="btn btn-secondary btn-compact" data-photo-action="download" data-index="' +
           index +
-          '">Download</button>' +
+          '">' +
+          exportLabel +
+          "</button>" +
           '<button type="button" class="btn btn-secondary btn-compact" data-photo-action="remove" data-index="' +
           index +
           '">Remove</button>' +
@@ -448,6 +474,7 @@
     elements.prevPhotoBtn.disabled = !hasMultiplePhotos;
     elements.nextPhotoBtn.disabled = !hasMultiplePhotos;
     elements.downloadBtn.disabled = !canExport;
+    elements.saveAllGalleryBtn.disabled = !canBulkExport || !hasMultiplePhotos || !canNativePhoneSave();
     elements.downloadAllBtn.disabled = !canBulkExport;
     elements.previewDownloadBtn.disabled = !canExport;
     elements.previewPrevBtn.disabled = !hasMultiplePhotos;
@@ -1182,7 +1209,9 @@
 
   async function fallbackBulkDownload() {
     setMessage(
-      "Starting separate downloads. If your browser asks, allow multiple downloads for this page."
+      isMobileDevice()
+        ? "Starting separate image downloads for all selected photos."
+        : "Starting separate downloads. If your browser asks, allow multiple downloads for this page."
     );
 
     for (var index = 0; index < state.photos.length; index += 1) {
@@ -1193,21 +1222,68 @@
     setMessage("All photos were sent to the browser download queue.");
   }
 
+  async function saveAllPhotosToGallery() {
+    if (state.photos.length < 2) {
+      setMessage("Upload at least two photos to use Save All to Gallery.");
+      return;
+    }
+
+    if (!canNativePhoneSave()) {
+      setMessage("This phone browser cannot save all photos directly to the gallery. Use Download All Separately.");
+      return;
+    }
+
+    try {
+      setMessage("Preparing " + state.photos.length + " photos for gallery save...");
+      var assets = await buildAllWatermarkedAssets();
+      var files = assets.map(createFileFromAsset);
+      var shareResult = await tryNativeShareFiles(files, "Watermark Studio Photos");
+
+      if (shareResult.status === "shared") {
+        setMessage(
+          "Phone save sheet opened for " +
+            state.photos.length +
+            " photos. Choose Photos, Gallery, or Save Images there."
+        );
+        return;
+      }
+
+      if (shareResult.status === "cancelled") {
+        setMessage("Save cancelled.");
+        return;
+      }
+
+      setMessage(
+        "This phone browser could not send all selected photos to the gallery at once. Try fewer photos or use Download All Separately."
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Preparing all gallery photos failed.");
+    }
+  }
+
   async function downloadAllPhotos() {
     if (!state.photos.length) {
       setMessage("Upload one or more photos first.");
       return;
     }
 
+    var attemptedZip = false;
+
     try {
       if (state.photos.length === 1) {
         await downloadPhotoByIndex(0, {
-          preferPhoneSave: canNativePhoneSave()
+          preferPhoneSave: false
         });
         return;
       }
 
+      if (isMobileDevice()) {
+        await fallbackBulkDownload();
+        return;
+      }
+
       if (window.JSZip) {
+        attemptedZip = true;
         setMessage("Preparing ZIP for " + state.photos.length + " photos...");
         var zip = new window.JSZip();
 
@@ -1224,7 +1300,7 @@
 
       await fallbackBulkDownload();
     } catch (error) {
-      if (window.JSZip) {
+      if (attemptedZip) {
         setMessage("ZIP download failed, so the app is switching to separate downloads.");
         try {
           await fallbackBulkDownload();
@@ -1319,6 +1395,7 @@
     });
     elements.capturePhotoBtn.addEventListener("click", capturePhoto);
     elements.downloadBtn.addEventListener("click", downloadImage);
+    elements.saveAllGalleryBtn.addEventListener("click", saveAllPhotosToGallery);
     elements.downloadAllBtn.addEventListener("click", downloadAllPhotos);
     elements.previewDownloadBtn.addEventListener("click", downloadImage);
     elements.previewPrevBtn.addEventListener("click", showPreviousPhoto);
@@ -1342,7 +1419,9 @@
       }
 
       if (action === "download") {
-        downloadPhotoByIndex(index).catch(function (error) {
+        downloadPhotoByIndex(index, {
+          preferPhoneSave: canNativePhoneSave()
+        }).catch(function (error) {
           setMessage(error instanceof Error ? error.message : "Download failed. Try again.");
         });
         return;
