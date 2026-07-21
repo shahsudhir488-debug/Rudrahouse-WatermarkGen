@@ -14,7 +14,7 @@ const chromePaths = [
 const executablePath = chromePaths.find((path) => existsSync(path));
 if (!executablePath) throw new Error("Set CHROME_PATH to a Chromium-based browser before running the E2E test.");
 
-const server = spawn("npm", ["run", "start", "--", "-p", String(port)], { stdio: ["ignore", "pipe", "pipe"] });
+const server = spawn("python3", ["-m", "http.server", String(port), "--bind", "127.0.0.1", "--directory", "out"], { stdio: ["ignore", "pipe", "pipe"] });
 let serverOutput = "";
 server.stdout.on("data", (chunk) => { serverOutput += chunk; });
 server.stderr.on("data", (chunk) => { serverOutput += chunk; });
@@ -46,8 +46,17 @@ try {
   await page.getByRole("heading", { name: "Frame the product" }).waitFor();
   await page.getByRole("button", { name: "Use this crop" }).click();
   await page.getByRole("heading", { name: "Add the details" }).waitFor();
+  await page.getByRole("toolbar", { name: "Watermark detail tools" }).waitFor();
+  await page.getByRole("button", { name: /Date/ }).click();
+  await page.getByText("Date stamp").waitFor();
+  await page.screenshot({ path: "/tmp/rudra-mobile-details.png", fullPage: true });
   await page.getByRole("button", { name: "Adjust look" }).click();
   await page.getByRole("heading", { name: "Finish the image" }).waitFor();
+  await page.getByRole("toolbar", { name: "Tone controls" }).waitFor();
+  await page.getByRole("button", { name: "Watermark" }).click();
+  await page.getByRole("toolbar", { name: "Watermark controls" }).waitFor();
+  await page.getByRole("button", { name: "Opacity" }).click();
+  await page.screenshot({ path: "/tmp/rudra-mobile-enhance.png", fullPage: true });
   await page.getByRole("button", { name: "Review photo" }).click();
   await page.getByRole("heading", { name: "Your photo is ready" }).waitFor();
   await page.getByText("Ready to save").waitFor({ timeout: 15000 });
@@ -67,6 +76,12 @@ try {
   await desktopPage.screenshot({ path: "/tmp/rudra-desktop-start.png", fullPage: true });
   await desktopPage.locator('.desktop-upload input[type="file"]').setInputFiles(resolve("public/rudra-house-logo.png"));
   await desktopPage.getByRole("heading", { name: "Frame the product" }).waitFor();
+  await desktopPage.getByRole("button", { name: "Use this crop" }).click();
+  await desktopPage.getByRole("heading", { name: "Add the details" }).waitFor();
+  await desktopPage.screenshot({ path: "/tmp/rudra-desktop-details.png", fullPage: true });
+  await desktopPage.getByRole("button", { name: "Adjust look" }).click();
+  await desktopPage.getByRole("heading", { name: "Finish the image" }).waitFor();
+  await desktopPage.screenshot({ path: "/tmp/rudra-desktop-enhance.png", fullPage: true });
   await desktop.close();
 
   cameraBrowser = await chromium.launch({ executablePath, headless: true, args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] });
@@ -85,7 +100,7 @@ try {
 
   if (errors.length) throw new Error(`Browser errors:\n${errors.join("\n")}`);
   console.log("E2E passed: mobile live-camera shutter → crop; mobile gallery → crop → details → enhance → preview → PNG download; desktop upload → crop.");
-  console.log("Screenshots: /tmp/rudra-mobile-camera.png, /tmp/rudra-mobile-preview.png, /tmp/rudra-desktop-start.png");
+  console.log("Screenshots: /tmp/rudra-mobile-camera.png, /tmp/rudra-mobile-details.png, /tmp/rudra-mobile-enhance.png, /tmp/rudra-mobile-preview.png, /tmp/rudra-desktop-start.png, /tmp/rudra-desktop-details.png, /tmp/rudra-desktop-enhance.png");
 } finally {
   if (cameraBrowser) await cameraBrowser.close();
   await browser.close();

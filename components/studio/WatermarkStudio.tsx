@@ -99,7 +99,7 @@ export function WatermarkStudio() {
   if (mobile === null) return <div className="app-loading" aria-label="Loading Rudra House Photo Studio" />;
 
   return (
-    <main className={`studio-app ${step === "capture" ? "at-camera" : ""}`}>
+    <main className={`studio-app ${step === "capture" ? "at-camera" : ""} ${step === "enhance" ? "at-enhance" : ""}`}>
       <header className="desktop-header">
         <img src="/rudra-house-logo.png" alt="Rudra House Nepal" />
         <div><span>Product photography tools</span><strong>Photo Studio</strong></div>
